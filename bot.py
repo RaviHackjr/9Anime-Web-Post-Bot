@@ -30,7 +30,6 @@ TMDB_API_KEY = "6bcc83f27058964856b4f2e98b38bb8f"
 TMDB_API_URL = "https://api.themoviedb.org/3"
 DATA_FILE = "/app/data/data.json"
 
-
 # Health check handler
 class HealthHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -96,11 +95,11 @@ async def help_command(client, message):
         "<b>/start</b> - Start the bot and get instructions\n"
         "<b>/help</b> - Show this help message\n"
         "<b>/setchnl &lt;channel_id&gt;</b> - Set a channel for forwarding posts\n"
-        "<b>/s</b> - Reply to a post with this command to forward it to all set channels\n\n"
+        "<b>/s</b> - Reply to a post with this command to post it to all set channels\n\n"
         "<b>Usage:</b>\n"
         "• Send an AnimeDekho URL to create a formatted post\n"
         "• Use /setchnl to add a channel (you must be an admin in that channel)\n"
-        "• Reply to any post with /s to forward it to all set channels"
+        "• Reply to any post with /s to post it to all set channels"
     )
     await message.reply_text(help_text, parse_mode=ParseMode.HTML)
 
@@ -146,11 +145,11 @@ async def set_channel(client, message):
         await message.reply_text(f"Error: {str(e)}")
 
 @app.on_message(filters.command("s"))
-async def forward_post(client, message):
-    """Forward a post to all set channels."""
+async def post_to_channels(client, message):
+    """Post a message to all set channels."""
     # Check if the message is a reply
     if not message.reply_to_message:
-        await message.reply_text("Please reply to a post with /s to forward it.")
+        await message.reply_text("Please reply to a post with /s to post it to all set channels.")
         return
     
     # Load channels
@@ -160,14 +159,15 @@ async def forward_post(client, message):
         await message.reply_text("No channels set. Use /setchnl to add channels first.")
         return
     
-    # Get the message to forward
+    # Get the message to post
     reply_msg = message.reply_to_message
     
-    # Forward to each channel
+    # Post to each channel
     success_count = 0
     for channel_id in channels:
         try:
             if reply_msg.photo:
+                # Send photo with caption and reply markup
                 await client.send_photo(
                     chat_id=channel_id,
                     photo=reply_msg.photo.file_id,
@@ -176,6 +176,7 @@ async def forward_post(client, message):
                     reply_markup=reply_msg.reply_markup
                 )
             elif reply_msg.text:
+                # Send text message with reply markup
                 await client.send_message(
                     chat_id=channel_id,
                     text=reply_msg.text,
@@ -185,9 +186,9 @@ async def forward_post(client, message):
                 )
             success_count += 1
         except Exception as e:
-            logger.error(f"Error forwarding to channel {channel_id}: {e}")
+            logger.error(f"Error posting to channel {channel_id}: {e}")
     
-    await message.reply_text(f"Post forwarded to {success_count}/{len(channels)} channels.")
+    await message.reply_text(f"Post sent to {success_count}/{len(channels)} channels.")
 
 def get_tmdb_banner(anime_title):
     """Fetch backdrop image from TMDB API"""
