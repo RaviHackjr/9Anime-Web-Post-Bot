@@ -10,8 +10,11 @@ import nest_asyncio
 import json
 import asyncio
 import os
-from http.server import HTTPServer, BaseHTTPRequestHandler
+import signal
+import sys
+import time
 import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
 
 # Enable logging
 logging.basicConfig(
@@ -354,7 +357,7 @@ async def handle_message(client, message):
     # Check if the URL is valid using a more flexible pattern
     if not re.match(r'https?://(www\.)?animedekho\.xyz/', url):
         # Check if we recently sent an error to this user
-        current_time = asyncio.get_event_loop().time()
+        current_time = time.time()
         if user_id in recent_errors and current_time - recent_errors[user_id] < 10:
             # Skip sending error if we sent one recently (within 10 seconds)
             return
@@ -390,7 +393,7 @@ async def handle_message(client, message):
         
         # Create caption with proper formatting - all in bold with quality info
         caption = (
-            f"<b>➥ <a href=\"{url}\">{base_title} Episode {ep_range} Added 👈🏻</a></b>\n\n"
+            f"<b>➥ <a href=\"{url}\">{base_title} Hindi Dubbed (ORG) Episode {ep_range} Added 👈🏻</a></b>\n\n"
             f"<b>➪ Quality: 480p | 720p | 1080p</b>\n"
             f"<b>➪ Audio: Multi Audio (Hindi-English-Jap)</b>\n"
             f"<b>☏ Powerd By : - @NineAnimeOfficial ☏</b>\n\n"
@@ -424,20 +427,88 @@ async def handle_message(client, message):
     except Exception as e:
         logger.error(f"Error processing URL: {e}")
         # Only send error message if we haven't sent one recently
-        current_time = asyncio.get_event_loop().time()
+        current_time = time.time()
         if user_id not in recent_errors or current_time - recent_errors[user_id] >= 10:
             recent_errors[user_id] = current_time
             await message.reply_text(f"An error occurred: {e}")
 
+# Graceful shutdown handler
+def signal_handler(sig, frame):
+    logger.info("Received shutdown signal, stopping bot...")
+    asyncio.create_task(app.stop())
+    sys.exit(0)
+
+# Register signal handlers
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
+
+async def keep_alive():
+    """Function to keep the bot alive by pinging Telegram servers periodically"""
+    while True:
+        try:
+            # Get bot info to check if connection is alive
+            await app.get_me()
+            logger.info("Bot is alive and connected")
+        except Exception as e:
+            logger.error(f"Keep-alive check failed: {e}")
+        
+        # Sleep for 5 minutes before next check
+        await asyncio.sleep(300)
+
 async def main():
-    """Start the bot."""
+    """Start the bot with restart mechanism"""
     # Start health check server in background
     health_thread = threading.Thread(target=start_health_server, daemon=True)
     health_thread.start()
     
-    await app.start()
-    logger.info("Bot started successfully!")
-    await asyncio.Event().wait()  # Keep the bot running
+    # Start keep-alive task
+    asyncio.create_task(keep_alive())
+    
+    # Main loop with restart mechanism
+    restart_count = 0
+    max_restarts = 10
+    restart_delay = 30  # seconds
+    
+    while restart_count < max_restarts:
+        try:
+            logger.info(f"Starting bot (attempt {restart_count + 1}/{max_restarts})")
+            await app.start()
+            logger.info("Bot started successfully!")
+            
+            # Reset restart count on successful start
+            restart_count = 0
+            
+            # Keep the bot running indefinitely
+            while True:
+                await asyncio.sleep(60)  # Check every minute
+                
+                # Check if bot is still connected
+                try:
+                    await app.get_me()
+                except:
+                    logger.error("Bot disconnected, attempting to restart...")
+                    break
+                    
+        except Exception as e:
+            logger.error(f"Bot crashed: {e}")
+            restart_count += 1
+            
+            if restart_count < max_restarts:
+                logger.info(f"Restarting bot in {restart_delay} seconds...")
+                await asyncio.sleep(restart_delay)
+            else:
+                logger.error("Maximum restart attempts reached. Exiting.")
+                sys.exit(1)
+        
+        finally:
+            try:
+                await app.stop()
+                logger.info("Bot stopped")
+            except:
+                pass
+    
+    logger.error("Bot terminated due to too many restarts")
 
 if __name__ == '__main__':
+    # Run the bot
     asyncio.run(main())
