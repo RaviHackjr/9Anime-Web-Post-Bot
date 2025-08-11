@@ -22,13 +22,14 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Configuration from environment variables
-BOT_TOKEN = os.environ.get("BOT_TOKEN")
-API_ID = int(os.environ.get("API_ID"))
-API_HASH = os.environ.get("API_HASH")
-TMDB_API_KEY = os.environ.get("TMDB_API_KEY")
+# Configuration - Set your credentials directly here
+BOT_TOKEN = "8174269081:AAEe4vVT9RDTJ6VKh8qkcjjauQiBGkshnWY"
+API_ID = 22225430
+API_HASH = "4c5c28abd62233ef4b993fb972f83262"
+TMDB_API_KEY = "6bcc83f27058964856b4f2e98b38bb8f"
 TMDB_API_URL = "https://api.themoviedb.org/3"
 DATA_FILE = "/app/data/data.json"
+
 
 # Health check handler
 class HealthHandler(BaseHTTPRequestHandler):
