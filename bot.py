@@ -177,7 +177,7 @@ async def post_to_channels(client, message):
                 # If we have stored data, reconstruct the caption with links
                 if stored_data:
                     caption = (
-                        f"<b>➥ <a href=\"{stored_data['url']}\">{stored_data['base_title']} Hindi Dubbed (ORG) Episode {stored_data['ep_range']} Added 👈🏻</a></b>\n\n"
+                        f"<b>➥ <a href=\"{stored_data['url']}\">{stored_data['base_title']} Episode {stored_data['ep_range']} Added 👈🏻</a></b>\n\n"
                         f"<b>➪ Quality: 480p | 720p | 1080p</b>\n"
                         f"<b>➪ Audio: Multi Audio (Hindi-English-Jap)</b>\n"
                         f"<b>☏ Powerd By : - @NineAnimeOfficial ☏</b>\n\n"
@@ -212,7 +212,7 @@ async def post_to_channels(client, message):
                 # If we have stored data, reconstruct the caption with links
                 if stored_data:
                     caption = (
-                        f"<b>➥ <a href=\"{stored_data['url']}\">{stored_data['base_title']} Hindi Dubbed (ORG) Episode {stored_data['ep_range']} Added 👈🏻</a></b>\n\n"
+                        f"<b>➥ <a href=\"{stored_data['url']}\">{stored_data['base_title']} Episode {stored_data['ep_range']} Added 👈🏻</a></b>\n\n"
                         f"<b>➪ Quality: 480p | 720p | 1080p</b>\n"
                         f"<b>➪ Audio: Multi Audio (Hindi-English-Jap)</b>\n"
                         f"<b>☏ Powerd By : - @NineAnimeOfficial ☏</b>\n\n"
