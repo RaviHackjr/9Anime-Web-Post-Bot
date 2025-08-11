@@ -30,6 +30,9 @@ TMDB_API_KEY = "6bcc83f27058964856b4f2e98b38bb8f"
 TMDB_API_URL = "https://api.themoviedb.org/3"
 DATA_FILE = "/app/data/data.json"
 
+# Dictionary to store post data for reconstruction
+post_data = {}
+
 # Health check handler
 class HealthHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -162,28 +165,84 @@ async def post_to_channels(client, message):
     # Get the message to post
     reply_msg = message.reply_to_message
     
+    # Try to get stored post data
+    msg_id = str(reply_msg.id)
+    stored_data = post_data.get(msg_id)
+    
     # Post to each channel
     success_count = 0
     for channel_id in channels:
         try:
             if reply_msg.photo:
-                # Send photo with caption and reply markup
-                await client.send_photo(
-                    chat_id=channel_id,
-                    photo=reply_msg.photo.file_id,
-                    caption=reply_msg.caption,
-                    parse_mode=ParseMode.HTML if reply_msg.caption else None,
-                    reply_markup=reply_msg.reply_markup
-                )
+                # If we have stored data, reconstruct the caption with links
+                if stored_data:
+                    caption = (
+                        f"<b>➥ <a href=\"{stored_data['url']}\">{stored_data['base_title']} Hindi Dubbed (ORG) Episode {stored_data['ep_range']} Added 👈🏻</a></b>\n\n"
+                        f"<b>➪ Quality: 480p | 720p | 1080p</b>\n"
+                        f"<b>➪ Audio: Multi Audio (Hindi-English-Jap)</b>\n"
+                        f"<b>☏ Powerd By : - @NineAnimeOfficial ☏</b>\n\n"
+                        f"<b>〖 <a href=\"https://t.me/BlakiteFF/4\">Join Our All Channels</a> 〗</b>\n"
+                        f"<b>〖 <a href=\"https://t.me/BlakiteFF\">How To Download & Watch</a> 〗</b>"
+                    )
+                    
+                    # Create inline keyboard with a single episode button showing only the last episode
+                    keyboard = [
+                        [InlineKeyboardButton(text=f"Episode {stored_data['last_episode']} Added", url=stored_data['url'])]
+                    ]
+                    reply_markup = InlineKeyboardMarkup(keyboard)
+                    
+                    # Send photo with reconstructed caption and reply markup
+                    await client.send_photo(
+                        chat_id=channel_id,
+                        photo=reply_msg.photo.file_id,
+                        caption=caption,
+                        parse_mode=ParseMode.HTML,
+                        reply_markup=reply_markup
+                    )
+                else:
+                    # Fallback to original caption if no stored data
+                    await client.send_photo(
+                        chat_id=channel_id,
+                        photo=reply_msg.photo.file_id,
+                        caption=reply_msg.caption,
+                        parse_mode=ParseMode.HTML if reply_msg.caption else None,
+                        reply_markup=reply_msg.reply_markup
+                    )
             elif reply_msg.text:
-                # Send text message with reply markup
-                await client.send_message(
-                    chat_id=channel_id,
-                    text=reply_msg.text,
-                    parse_mode=ParseMode.HTML,
-                    reply_markup=reply_msg.reply_markup,
-                    disable_web_page_preview=True
-                )
+                # If we have stored data, reconstruct the caption with links
+                if stored_data:
+                    caption = (
+                        f"<b>➥ <a href=\"{stored_data['url']}\">{stored_data['base_title']} Hindi Dubbed (ORG) Episode {stored_data['ep_range']} Added 👈🏻</a></b>\n\n"
+                        f"<b>➪ Quality: 480p | 720p | 1080p</b>\n"
+                        f"<b>➪ Audio: Multi Audio (Hindi-English-Jap)</b>\n"
+                        f"<b>☏ Powerd By : - @NineAnimeOfficial ☏</b>\n\n"
+                        f"<b>〖 <a href=\"https://t.me/BlakiteFF/4\">Join Our All Channels</a> 〗</b>\n"
+                        f"<b>〖 <a href=\"https://t.me/BlakiteFF\">How To Download & Watch</a> 〗</b>"
+                    )
+                    
+                    # Create inline keyboard with a single episode button showing only the last episode
+                    keyboard = [
+                        [InlineKeyboardButton(text=f"Episode {stored_data['last_episode']} Added", url=stored_data['url'])]
+                    ]
+                    reply_markup = InlineKeyboardMarkup(keyboard)
+                    
+                    # Send text with reconstructed caption and reply markup
+                    await client.send_message(
+                        chat_id=channel_id,
+                        text=caption,
+                        parse_mode=ParseMode.HTML,
+                        reply_markup=reply_markup,
+                        disable_web_page_preview=True
+                    )
+                else:
+                    # Fallback to original text if no stored data
+                    await client.send_message(
+                        chat_id=channel_id,
+                        text=reply_msg.text,
+                        parse_mode=ParseMode.HTML,
+                        reply_markup=reply_msg.reply_markup,
+                        disable_web_page_preview=True
+                    )
             success_count += 1
         except Exception as e:
             logger.error(f"Error posting to channel {channel_id}: {e}")
@@ -412,19 +471,28 @@ async def handle_message(client, message):
         
         # Send message with banner image if available
         if banner_url:
-            await message.reply_photo(
+            sent_message = await message.reply_photo(
                 photo=banner_url,
                 caption=caption,
                 parse_mode=ParseMode.HTML,
                 reply_markup=reply_markup
             )
         else:
-            await message.reply_text(
+            sent_message = await message.reply_text(
                 text=caption,
                 parse_mode=ParseMode.HTML,
                 reply_markup=reply_markup,
                 disable_web_page_preview=True
             )
+        
+        # Store post data for reconstruction when posting to channels
+        post_data[str(sent_message.id)] = {
+            'url': url,
+            'base_title': base_title,
+            'ep_range': ep_range,
+            'last_episode': last_episode,
+            'banner_url': banner_url
+        }
             
     except Exception as e:
         logger.error(f"Error processing URL: {e}")
